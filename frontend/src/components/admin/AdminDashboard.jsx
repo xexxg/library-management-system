@@ -1,78 +1,46 @@
-import { useEffect, useMemo, useState } from 'react'
-import AdminMessageBar from './components/AdminMessageBar'
-import { ADMIN_PAGES } from './constants'
-import AdminOverview from './pages/AdminOverview'
-import UserManagement from './pages/UserManagement'
+import React, { useState, useEffect } from 'react';
+import { ADMIN_PAGES } from './constants';
+import axios from 'axios';
 
-const PAGE_NAME = {
-  [ADMIN_PAGES.OVERVIEW]: 'Overview',
-  [ADMIN_PAGES.USER_MANAGE]: 'User Manage'
-}
-
-const AdminDashboard = ({ user, handleLogout, getRoleName }) => {
-  const [currentPage, setCurrentPage] = useState(ADMIN_PAGES.OVERVIEW)
-  const [message, setMessage] = useState({ type: '', text: '' })
-
-  const currentUserId = useMemo(() => user.id || user.userId, [user.id, user.userId])
+const AdminDashboard = () => {
+  const [menu, setMenu] = useState([]);
+  const [currentPage, setCurrentPage] = useState(ADMIN_PAGES.OVERVIEW);
 
   useEffect(() => {
-    if (!message.text) return
-    const timer = setTimeout(() => setMessage({ type: '', text: '' }), 3000)
-    return () => clearTimeout(timer)
-  }, [message])
-
-  const notify = (type, text) => setMessage({ type, text })
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case ADMIN_PAGES.USER_MANAGE:
-        return <UserManagement currentUserId={currentUserId} onNotify={notify} />
-      case ADMIN_PAGES.OVERVIEW:
-      default:
-        return <AdminOverview user={user} onNavigate={setCurrentPage} />
-    }
-  }
+    const fetchMenu = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/dashboard/menu', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setMenu(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchMenu();
+  }, []);
 
   return (
-    <div className="dashboard-container">
-      <aside className="sidebar">
-        <nav className="sidebar-menu">
-          <div className="menu-item-header">📚 Library Admin</div>
-          <div className={`menu-item ${currentPage === ADMIN_PAGES.OVERVIEW ? 'active' : ''}`} onClick={() => setCurrentPage(ADMIN_PAGES.OVERVIEW)}>
-            <span className="icon">🏠</span>
-            <span>Overview</span>
-          </div>
-          <div className={`menu-item ${currentPage === ADMIN_PAGES.USER_MANAGE ? 'active' : ''}`} onClick={() => setCurrentPage(ADMIN_PAGES.USER_MANAGE)}>
-            <span className="icon">🧩</span>
-            <span>User Manage</span>
-          </div>
-        </nav>
-        <div className="user-info">
-          <div className="user-avatar">{user.name?.[0]?.toUpperCase() || 'A'}</div>
-          <div className="user-details">
-            <div className="user-name">{user.name}</div>
-            <div className="user-role">{getRoleName(user.role)}</div>
-          </div>
-        </div>
-        <button className="logout-btn" onClick={handleLogout}>Logout</button>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-nav">
-          <span className="breadcrumb">Admin / {PAGE_NAME[currentPage]}</span>
-          <div className="top-user">
-            <span className="top-user-name">{user.name}</span>
-            <span className="role-badge">{getRoleName(user.role)}</span>
-          </div>
-        </header>
-
-        <div style={{ padding: '0 28px' }}>
-          <AdminMessageBar message={message} />
-        </div>
-        {renderPage()}
-      </main>
+    <div style={{ display: 'flex' }}>
+      <div style={{ width: 250, background: '#f5f5f5', padding: '20px' }}>
+        <h3>Admin Dashboard</h3>
+        {menu.map(item => (
+          <button
+            key={item.key}
+            onClick={() => setCurrentPage(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1, padding: '20px' }}>
+        {currentPage === ADMIN_PAGES.OVERVIEW && <div>Overview</div>}
+        {currentPage === ADMIN_PAGES.USER_MANAGE && <div>用户管理</div>}
+        {currentPage === ADMIN_PAGES.LIBRARIAN_MANAGE && <div>管理员管理</div>}
+        {currentPage === ADMIN_PAGES.ROLE_PERMISSION && <div>权限管理</div>}
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default AdminDashboard
+export default AdminDashboard;
